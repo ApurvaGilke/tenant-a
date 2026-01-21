@@ -1,0 +1,22 @@
+# tenant-a/.github/workflows/notify-parent.yml
+name: Notify multi-tenant parent
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send repository_dispatch
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.AGGREGATOR_PUSH_TOKEN }}
+          repository: ${{ secrets.AGGREGATOR_REPO }}
+          event-type: tenant-updated
+          client-payload: |
+            {
+              "tenant": "tenant-a",
+              "branch": "main"
+            }
