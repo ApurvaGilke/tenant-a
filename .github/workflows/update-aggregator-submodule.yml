@@ -1,5 +1,5 @@
-# tenant-a/.github/workflows/notify-parent.yml
-name: Notify multi-tenant parent
+# tenant-a/.github/workflows/update-aggregator-submodule.yml
+name: Notify multi-tenant-poc aggregator repository
 
 on:
   push:
