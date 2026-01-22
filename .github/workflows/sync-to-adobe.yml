@@ -1,4 +1,4 @@
-name: Sync to Adobe Cloud Manager Git
+name: Sync to Adobe Git
 
 on:
   push:
@@ -6,53 +6,37 @@ on:
       - main
       - develop
       - 'release/*'
-  workflow_dispatch: {}  # allow manual trigger from Actions tab
+  workflow_dispatch: {}
 
 jobs:
-  sync-to-adobe:
+  sync:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout GitHub repo
+      - name: Checkout this GitHub repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # get full history & all branches
+          fetch-depth: 0  # important to get all history
 
-      - name: Configure Git user
+      - name: Install Git
+        run: sudo apt-get update && sudo apt-get install -y git
+
+      - name: Configure Git
         run: |
-          git config --global user.name "github-sync-bot"
-          git config --global user.email "github-sync-bot@example.com"
-          git config --global credential.helper cache
+          git config --global user.name "ci-sync-bot"
+          git config --global user.email "ci-sync-bot@example.com"
 
-      - name: Add Adobe remote and fetch
+      - name: Add Adobe remote
         env:
           GIT_USERNAME: ${{ secrets.CM_GIT_USER }}
           GIT_PASSWORD: ${{ secrets.CM_GIT_PASS }}
-          CM_REPO: git.cloudmanager.adobe.com/ags2629/cloud-manager-tenant-a.git
+          ADOBE_REPO_URL: ${{ secrets.CM_REPO_URL }}
         run: |
-          # Store credentials in git credential helper
-          echo "https://${GIT_USERNAME}:${GIT_PASSWORD}@git.cloudmanager.adobe.com" | git credential approve
-          
-          # Add Adobe remote with credentials embedded in URL
-          git remote add adobe "https://${GIT_USERNAME}:${GIT_PASSWORD}@${CM_REPO}" 2>/dev/null || \
-          git remote set-url adobe "https://${GIT_USERNAME}:${GIT_PASSWORD}@${CM_REPO}"
-          
-          echo "========== Git Remotes =========="
-          git remote -v
+          # Build URL with embedded credentials
+          REPO_URL="https://${GIT_USERNAME}:${GIT_PASSWORD}@${ADOBE_REPO_URL#https://}"
+          git remote add adobe "$REPO_URL"
+          git fetch --all --prune
 
-          echo "========== Fetching from GitHub Origin =========="
-          git fetch origin --prune
-
-      - name: Push all branches and tags to Adobe
-        env:
-          GIT_USERNAME: ${{ secrets.CM_GIT_USER }}
-          GIT_PASSWORD: ${{ secrets.CM_GIT_PASS }}
+      - name: Push mirror to Adobe
         run: |
-          # Ensure credentials are available for push
-          echo "https://${GIT_USERNAME}:${GIT_PASSWORD}@git.cloudmanager.adobe.com" | git credential approve
-          
-          echo "========== Pushing All Branches =========="
-          git push adobe --all
-
-          echo "========== Pushing All Tags =========="
-          git push adobe --tags
+          git push --mirror adobe
