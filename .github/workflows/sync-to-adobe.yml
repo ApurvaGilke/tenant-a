@@ -31,7 +31,7 @@ jobs:
         run: |
           echo "========== Preparing Adobe Remote URL with Credentials =========="
           # Build authenticated URL by inserting credentials after https://
-          ADOBE_REPO_URL_WITH_CREDS="${ADOBE_REPO_URL/https:\/\//https:\/\/${GIT_USERNAME}:${GIT_PASSWORD}@}"
+          ADOBE_REPO_URL_WITH_CREDS=$(echo "$ADOBE_REPO_URL" | sed "s|https://|https://${GIT_USERNAME}:${GIT_PASSWORD}@|")
           
           echo "========== Git Remotes Before =========="
           git remote -v
