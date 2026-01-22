@@ -1,56 +1,36 @@
-name: Sync to Adobe Git
+name: Sync to Cloud Manager
 
 on:
   push:
     branches:
-      - main
-      - develop
-      - 'release/*'
-  workflow_dispatch: {}
+      - main   # adjust if you use a different branch
 
 jobs:
   sync:
-    # For POC you're probably still on github-hosted. For real use,
-    # consider switching to a self-hosted runner if CM Git is not reachable.
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout this GitHub repo
+      - name: Checkout GitHub repo
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0      # full history for mirror
-          fetch-tags: true
 
-      - name: Configure Git
+      - name: Configure Git identity
         run: |
-          git config --global user.name  "ci-sync-bot"
-          git config --global user.email "ci-sync-bot@example.com"
+          git config --global user.name "Cloud Sync Bot"
+          git config --global user.email "cloud-sync-bot@example.com"
 
-      - name: Add Adobe remote
+      - name: Push to Cloud Manager remote
         env:
-          CM_GIT_USER: ${{ secrets.CM_GIT_USER }}   # from CM "Manage Git"
-          CM_GIT_PASS: ${{ secrets.CM_GIT_PASS }}   # from CM "Manage Git"
-          CM_REPO_URL: ${{ secrets.CM_REPO_URL }}   # e.g. https://git.cloudmanager.adobe.com/<tenant>/cloud-manager-tenant-a.git
+          CM_GIT_USER: ${{ secrets.CM_GIT_USER }}
+          CM_GIT_PASSWORD: ${{ secrets. CM_GIT_PASS }}
         run: |
-          # Basic validation to avoid pushing to an empty URL
-          if [ -z "$CM_GIT_USER" ] || [ -z "$CM_GIT_PASS" ] || [ -z "$CM_REPO_URL" ]; then
-            echo "CM_GIT_USER / CM_GIT_PASS / CM_REPO_URL must be set as secrets."
-            exit 1
-          fi
+          # Rebuild the Cloud Manager repo URL including credentials
+          CM_REPO="https://${CM_GIT_USER}:${CM_GIT_PASSWORD}@git.cloudmanager.adobe.com/ags2629/cloud-manager-tenant-a/"
 
-          # Build URL with embedded credentials
-          ADOBE_URL="https://${CM_GIT_USER}:${CM_GIT_PASS}@${CM_REPO_URL#https://}"
+          # Add cm remote pointing to CM_REPO
+          git remote add cm "$CM_REPO"
 
-          echo "Adding adobe remote for $CM_REPO_URL"
-          if git remote | grep -q '^adobe$'; then
-            git remote set-url adobe "$ADOBE_URL"
-          else
-            git remote add adobe "$ADOBE_URL"
-          fi
+          # Get the branch from the GitHub ref
+          BRANCH_NAME="${GITHUB_REF##*/}"
 
-          git remote -v
-
-      - name: Push mirror to Adobe
-        run: |
-          # Push all refs (branches + tags) to Adobe
-          git push --mirror adobe
+          # Push the branch 1:1 from GitHub to Cloud Manager
+          git push cm "$BRANCH_NAME":"$BRANCH_NAME" --force
