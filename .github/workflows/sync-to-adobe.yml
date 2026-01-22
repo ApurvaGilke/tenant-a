@@ -22,6 +22,7 @@ jobs:
         run: |
           git config --global user.name "github-sync-bot"
           git config --global user.email "github-sync-bot@example.com"
+          git config --global credential.helper cache
 
       - name: Add Adobe remote and fetch
         env:
@@ -29,6 +30,9 @@ jobs:
           GIT_PASSWORD: ${{ secrets.CM_GIT_PASS }}
           CM_REPO: git.cloudmanager.adobe.com/ags2629/cloud-manager-tenant-a.git
         run: |
+          # Store credentials in git credential helper
+          echo "https://${GIT_USERNAME}:${GIT_PASSWORD}@git.cloudmanager.adobe.com" | git credential approve
+          
           # Add Adobe remote with credentials embedded in URL
           git remote add adobe "https://${GIT_USERNAME}:${GIT_PASSWORD}@${CM_REPO}" 2>/dev/null || \
           git remote set-url adobe "https://${GIT_USERNAME}:${GIT_PASSWORD}@${CM_REPO}"
@@ -40,7 +44,13 @@ jobs:
           git fetch origin --prune
 
       - name: Push all branches and tags to Adobe
+        env:
+          GIT_USERNAME: ${{ secrets.CM_GIT_USER }}
+          GIT_PASSWORD: ${{ secrets.CM_GIT_PASS }}
         run: |
+          # Ensure credentials are available for push
+          echo "https://${GIT_USERNAME}:${GIT_PASSWORD}@git.cloudmanager.adobe.com" | git credential approve
+          
           echo "========== Pushing All Branches =========="
           git push adobe --all
 
