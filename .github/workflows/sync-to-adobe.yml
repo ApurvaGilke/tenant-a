@@ -23,41 +23,29 @@ jobs:
           git config --global user.name "github-sync-bot"
           git config --global user.email "github-sync-bot@example.com"
 
-      - name: Configure Git credentials
+      - name: Add Adobe remote and fetch
         env:
           GIT_USERNAME: ${{ secrets.CM_GIT_USER }}
           GIT_PASSWORD: ${{ secrets.CM_GIT_PASS }}
-        run: |
-          echo "Configuring Git credentials..."
-          git config --global credential.helper store
-          echo "https://${GIT_USERNAME}:${GIT_PASSWORD}@git.cloud-manager.adobe.com" > ~/.git-credentials
-          chmod 600 ~/.git-credentials
-          echo "Git credentials configured"
-
-      - name: Add Adobe remote and fetch
-        env:
           ADOBE_REPO_URL: ${{ secrets.CM_REPO_URL }}
         run: |
+          echo "========== Preparing Adobe Remote URL with Credentials =========="
+          # Extract host from ADOBE_REPO_URL and build authenticated URL
+          REPO_HOST=$(echo "$ADOBE_REPO_URL" | sed 's|https://||' | sed 's|/.*||')
+          REPO_PATH=$(echo "$ADOBE_REPO_URL" | sed "s|https://${REPO_HOST}||")
+          ADOBE_REPO_URL_WITH_CREDS="https://${GIT_USERNAME}:${GIT_PASSWORD}@${REPO_HOST}${REPO_PATH}"
+          
           echo "========== Git Remotes Before =========="
           git remote -v
           
-          echo "========== ADOBE_REPO_URL Value =========="
-          echo "URL: $ADOBE_REPO_URL"
-          
-          echo "========== Testing URL Accessibility =========="
-          if curl -I "$ADOBE_REPO_URL" 2>&1 | head -1; then
-            echo "URL is accessible"
-          else
-            echo "Warning: Could not verify URL accessibility with curl"
-          fi
-
           echo "========== Adding Adobe Remote =========="
           # Add Adobe remote if not present
           if ! git remote | grep -q '^adobe$'; then
-            git remote add adobe "$ADOBE_REPO_URL"
-            echo "Adobe remote added"
+            git remote add adobe "$ADOBE_REPO_URL_WITH_CREDS"
+            echo "Adobe remote added with credentials"
           else
-            echo "Adobe remote already exists"
+            git remote set-url adobe "$ADOBE_REPO_URL_WITH_CREDS"
+            echo "Adobe remote updated with credentials"
           fi
 
           echo "========== Git Remotes After =========="
@@ -68,13 +56,7 @@ jobs:
           echo "GitHub fetch completed"
 
       - name: Push all branches and tags to Adobe
-        env:
-          ADOBE_REPO_URL: ${{ secrets.CM_REPO_URL }}
         run: |
-          echo "========== Setting Adobe Remote URL =========="
-          git remote set-url adobe "$ADOBE_REPO_URL"
-          echo "Adobe remote URL set to: $ADOBE_REPO_URL"
-
           echo "========== Final Remote Configuration =========="
           git remote -v
 
