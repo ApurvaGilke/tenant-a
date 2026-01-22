@@ -10,33 +10,47 @@ on:
 
 jobs:
   sync:
+    # For POC you're probably still on github-hosted. For real use,
+    # consider switching to a self-hosted runner if CM Git is not reachable.
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout this GitHub repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # important to get all history
-
-      - name: Install Git
-        run: sudo apt-get update && sudo apt-get install -y git
+          fetch-depth: 0      # full history for mirror
+          fetch-tags: true
 
       - name: Configure Git
         run: |
-          git config --global user.name "ci-sync-bot"
+          git config --global user.name  "ci-sync-bot"
           git config --global user.email "ci-sync-bot@example.com"
 
       - name: Add Adobe remote
         env:
-          GIT_USERNAME: ${{ secrets.CM_GIT_USER }}
-          GIT_PASSWORD: ${{ secrets.CM_GIT_PASS }}
-          ADOBE_REPO_URL: ${{ secrets.CM_REPO_URL }}
+          CM_GIT_USER: ${{ secrets.CM_GIT_USER }}   # from CM "Manage Git"
+          CM_GIT_PASS: ${{ secrets.CM_GIT_PASS }}   # from CM "Manage Git"
+          CM_REPO_URL: ${{ secrets.CM_REPO_URL }}   # e.g. https://git.cloudmanager.adobe.com/<tenant>/cloud-manager-tenant-a.git
         run: |
+          # Basic validation to avoid pushing to an empty URL
+          if [ -z "$CM_GIT_USER" ] || [ -z "$CM_GIT_PASS" ] || [ -z "$CM_REPO_URL" ]; then
+            echo "CM_GIT_USER / CM_GIT_PASS / CM_REPO_URL must be set as secrets."
+            exit 1
+          fi
+
           # Build URL with embedded credentials
-          REPO_URL="https://${GIT_USERNAME}:${GIT_PASSWORD}@${ADOBE_REPO_URL#https://}"
-          git remote add adobe "$REPO_URL"
-          git fetch --all --prune
+          ADOBE_URL="https://${CM_GIT_USER}:${CM_GIT_PASS}@${CM_REPO_URL#https://}"
+
+          echo "Adding adobe remote for $CM_REPO_URL"
+          if git remote | grep -q '^adobe$'; then
+            git remote set-url adobe "$ADOBE_URL"
+          else
+            git remote add adobe "$ADOBE_URL"
+          fi
+
+          git remote -v
 
       - name: Push mirror to Adobe
         run: |
+          # Push all refs (branches + tags) to Adobe
           git push --mirror adobe
