@@ -30,10 +30,8 @@ jobs:
           ADOBE_REPO_URL: ${{ secrets.CM_REPO_URL }}
         run: |
           echo "========== Preparing Adobe Remote URL with Credentials =========="
-          # Extract host from ADOBE_REPO_URL and build authenticated URL
-          REPO_HOST=$(echo "$ADOBE_REPO_URL" | sed 's|https://||' | sed 's|/.*||')
-          REPO_PATH=$(echo "$ADOBE_REPO_URL" | sed "s|https://${REPO_HOST}||")
-          ADOBE_REPO_URL_WITH_CREDS="https://${GIT_USERNAME}:${GIT_PASSWORD}@${REPO_HOST}${REPO_PATH}"
+          # Build authenticated URL by inserting credentials after https://
+          ADOBE_REPO_URL_WITH_CREDS="${ADOBE_REPO_URL/https:\/\//https:\/\/${GIT_USERNAME}:${GIT_PASSWORD}@}"
           
           echo "========== Git Remotes Before =========="
           git remote -v
