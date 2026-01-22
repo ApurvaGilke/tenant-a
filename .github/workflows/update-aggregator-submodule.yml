@@ -1,4 +1,4 @@
-name: Notify aggregator
+name: Notify aggregator workflow
 
 on:
   push:
@@ -16,5 +16,6 @@ jobs:
           client-payload: |
             {
               "tenant": "tenant-a",
-              "branch": "${{ github.ref_name }}"
+              "branch": "${{ github.ref_name }}",
+              "commit_sha": "${{ github.sha }}"
             }
