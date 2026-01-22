@@ -27,37 +27,20 @@ jobs:
         env:
           GIT_USERNAME: ${{ secrets.CM_GIT_USER }}
           GIT_PASSWORD: ${{ secrets.CM_GIT_PASS }}
-          ADOBE_REPO_URL: ${{ secrets.CM_REPO_URL }}
+          CM_REPO: git.cloudmanager.adobe.com/ags2629/cloud-manager-tenant-a.git
         run: |
-          echo "========== Preparing Adobe Remote URL with Credentials =========="
-          # Build authenticated URL by inserting credentials after https://
-          ADOBE_REPO_URL_WITH_CREDS=$(echo "$ADOBE_REPO_URL" | sed "s|https://|https://${GIT_USERNAME}:${GIT_PASSWORD}@|")
+          # Add Adobe remote with credentials embedded in URL
+          git remote add adobe "https://${GIT_USERNAME}:${GIT_PASSWORD}@${CM_REPO}" 2>/dev/null || \
+          git remote set-url adobe "https://${GIT_USERNAME}:${GIT_PASSWORD}@${CM_REPO}"
           
-          echo "========== Git Remotes Before =========="
-          git remote -v
-          
-          echo "========== Adding Adobe Remote =========="
-          # Add Adobe remote if not present
-          if ! git remote | grep -q '^adobe$'; then
-            git remote add adobe "$ADOBE_REPO_URL_WITH_CREDS"
-            echo "Adobe remote added with credentials"
-          else
-            git remote set-url adobe "$ADOBE_REPO_URL_WITH_CREDS"
-            echo "Adobe remote updated with credentials"
-          fi
-
-          echo "========== Git Remotes After =========="
+          echo "========== Git Remotes =========="
           git remote -v
 
           echo "========== Fetching from GitHub Origin =========="
           git fetch origin --prune
-          echo "GitHub fetch completed"
 
       - name: Push all branches and tags to Adobe
         run: |
-          echo "========== Final Remote Configuration =========="
-          git remote -v
-
           echo "========== Pushing All Branches =========="
           git push adobe --all
 
