@@ -69,7 +69,7 @@ jobs:
 
       - name: Push all branches and tags to Adobe
         env:
-          ADOBE_REPO_URL: ${{ secrets.ADOBE_REPO_URL }}
+          ADOBE_REPO_URL: ${{ secrets.CM_REPO_URL }}
         run: |
           echo "========== Setting Adobe Remote URL =========="
           git remote set-url adobe "$ADOBE_REPO_URL"
