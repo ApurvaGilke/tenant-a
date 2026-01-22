@@ -1,0 +1,52 @@
+name: Sync to Adobe Cloud Manager Git
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'release/*'
+  workflow_dispatch: {}  # allow manual trigger from Actions tab
+
+jobs:
+  sync-to-adobe:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout GitHub repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # get full history & all branches
+
+      - name: Configure Git user
+        run: |
+          git config --global user.name "github-sync-bot"
+          git config --global user.email "github-sync-bot@example.com"
+
+      - name: Add Adobe remote and fetch
+        env:
+          ADOBE_REPO_URL: ${{ secrets.ADOBE_REPO_URL }}
+        run: |
+          # Show existing remotes for debugging
+          git remote -v
+
+          # Add Adobe remote if not present
+          if ! git remote | grep -q '^adobe$'; then
+            git remote add adobe "$ADOBE_REPO_URL"
+          fi
+
+          # Fetch all refs from GitHub origin
+          git fetch origin --prune
+
+      - name: Push all branches and tags to Adobe
+        env:
+          ADOBE_REPO_URL: ${{ secrets.ADOBE_REPO_URL }}
+        run: |
+          # Ensure adobe remote points to the right URL
+          git remote set-url adobe "$ADOBE_REPO_URL"
+
+          # Push all branches
+          git push adobe --all
+
+          # Push all tags
+          git push adobe --tags
